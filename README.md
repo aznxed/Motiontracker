@@ -5,10 +5,12 @@ This repository contains a python script to track the motion based on a cropped 
 ```
 python Motiontracker.py
 ```
-1. Select the .mp4 file
-2. Once the desired chamber to track is empty press 'P' to pause
-3. Press 'M' to select the chamber
-4. Press 'Q' once finished.
-5. Motion in the chamber will be tracked
+* Select the .mp4 file
+* Once the desired chamber to track is empty press 'P' to pause
+* Press 'M' to select the chamber
+* Press 'Q' once finished.
+* Motion in the chamber will be tracked
 
 ## Future Development 
+* Add ability to track a second chamber
+* Calculate time spent in each chamber
