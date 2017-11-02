@@ -76,7 +76,7 @@ cap.set(cv2.CAP_PROP_POS_FRAMES, frameNumber)
 length = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
 #print length
 ret,frame = cap.read()
-
+print len(corners)
 roi = frame[corners[0][1]:corners[1][1], corners[0][0]:corners[1][0]]
 roi2 = frame[corners[2][1]:corners[3][1], corners[2][0]:corners[3][0]]
 
@@ -98,10 +98,7 @@ for a in range(length):
 	text = "Unoccupied"
 	text2 = "Unoccupied"
 
-	#key = cv2.waitKey(25) & 0xFF
-	frameNumber+=1
-	cv2.rectangle(frame, corners[0], corners[1], (0, 255, 0), 2)
-	cv2.rectangle(frame, corners[2], corners[3], (255, 0, 0), 2)
+	key = cv2.waitKey(25) & 0xFF
 
 	roi = frame[corners[0][1]:corners[1][1], corners[0][0]:corners[1][0]]
 	roi2 = frame[corners[2][1]:corners[3][1], corners[2][0]:corners[3][0]]
@@ -111,7 +108,6 @@ for a in range(length):
 
 	gray2 = cv2.cvtColor(roi2, cv2.COLOR_BGR2GRAY)
 	gray2 = cv2.GaussianBlur(gray2, (21, 21), 0)
-
 
 	frameDelta = cv2.absdiff(refFrame, gray)
 	thresh = cv2.threshold(frameDelta, 10, 255, cv2.THRESH_BINARY)[1]
@@ -136,7 +132,7 @@ for a in range(length):
 
 	for c in cnts2:
 		# if the contour is too small, ignore it
-		if cv2.contourArea(c) < 5:
+		if cv2.contourArea(c) < 25:
 			continue
 
 		# compute the bounding box for the contour, draw it on the frame,
@@ -155,24 +151,28 @@ for a in range(length):
 
 	bar.next()
 
+	cv2.rectangle(frame, corners[0], corners[1], (0, 255, 0), 2)
+	cv2.rectangle(frame, corners[2], corners[3], (255, 0, 0), 2)
+
 	# draw the text and timestamp on the frame
-	#cv2.putText(frame, "Chamber Status 1: {}".format(text), (10, 20),
-	#	cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
+	cv2.putText(frame, "Chamber Status 1: {}".format(text), (10, 20),
+		cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
 
-	#cv2.putText(frame, "Chamber Status 2: {}".format(text2), (10, 40),
-	#	cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
+	cv2.putText(frame, "Chamber Status 2: {}".format(text2), (10, 40),
+		cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
 	
-	#cv2.imshow("Thresh", thresh)
-	#cv2.imshow("Frame Delta", frameDelta)
+	cv2.imshow("Thresh", thresh)
+	cv2.imshow("Frame Delta", frameDelta)
 
-	#cv2.imshow("Thresh2", thresh2)
-	#cv2.imshow("Frame Delta2", frameDelta2)
-	#cv2.imshow(frame_title,frame)
+	cv2.imshow("Thresh2", thresh2)
+	cv2.imshow("Frame Delta2", frameDelta2)
+	cv2.imshow(frame_title,frame)
 
 	
-	#if key == ord('q') or key == 27:
-	#	cv2.destroyAllWindows()
-	#	cap.release()
+	if key == ord('q') or key == 27:
+		cv2.destroyAllWindows()
+		cap.release()
+
 bar.finish()
 print len(frametracker)
 print len(frametracker2)
