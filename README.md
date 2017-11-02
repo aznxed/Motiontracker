@@ -1,8 +1,13 @@
 ## Mouse Motion Tracking
 This repository contains a python script to track the motion based on a cropped region of interest. It uses the pixel difference of a reference frame to determine if there is motion. If there is a pixel difference, a contour is drawn based on the difference. If the contour is large enough, motion is recorded. 
 
-## Usage
 * The Python progress bar may need to be downloaded and can be downloaded here [https://pypi.python.org/pypi/progress]
+* Install using 
+```
+python setup.py install 
+```
+
+## Usage
 ```
 python Motiontracker.py
 ```
