@@ -12,9 +12,10 @@ python setup.py install
 python Motiontracker.py
 ```
 * Select the .mp4 file
-* Once the desired chamber to track is empty press 'P' to pause
-* Press 'M' to select the chamber
-* Press 'Q' once finished.
+* Once both the desired chambers to track are empty press 'P' to pause
+* Press 'M' to select the first chamber
+* Press 'M' again to select the second chamber
+* Press 'Q' once finished
 * Motion in the chamber will be tracked
 
 ## New Features
