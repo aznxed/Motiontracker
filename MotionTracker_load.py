@@ -40,17 +40,21 @@ else:
     plt.plot(frames[1], 'r')
 
 plt.ylim([-2,4])
-plt.title('tracked in right and middle chambers')
+plt.title('Tracked in right and middle chambers')
 plt.legend({'R', 'M'})
 plt.show()
+
 
 frames3 = []
 for a in range(len(frames[0])):
     if frames[0][a] == 0 and frames[1][a] == 0:
         frames3.append(1)
 
-print frames[0].count(1)
-print frames[1].count(1)
-print frames3.count(1)
-print frames[0].count(1) + frames[1].count(1) + frames3.count(1)
-print len(frames[1])
+#Frames[0] = Middle Chamber
+#Frames[1] = Right Chamber
+#Frames3 = Left Chamber
+print 'Total number of frames ' + str(len(frames[1]))
+print 'Frames spent in middle chamber ' + str(frames[0].count(1))
+print 'Frames spent in right chamber ' + str(frames[1].count(1))
+print 'Frames spent in left chamber ' + str(frames3.count(1))
+
