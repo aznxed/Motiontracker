@@ -97,11 +97,32 @@ def displayImageDif(frame, corners, thresh, thresh2, frameDelta, frameDelta2):
 	cv2.imshow(frame_title,frame)
 	pass
 
+def processText(cnts, cnts2, text, text2, frametracker, frametracker2):
+	if text == 'Occupied' and text2 == 'Occupied':
+			#Compare which contour is larger
+		if maxContour(cnts) > maxContour(cnts2):
+			frametracker.append( 1 )
+			frametracker2.append( 0 )
+		else:
+			frametracker.append( 0 )
+			frametracker2.append( 1 )
+
+	elif text == 'Unoccupied' and text2 == 'Occupied':
+		frametracker.append( 0 )
+		frametracker2.append( 1 )
+	elif text == 'Occupied' and text2 == 'Unoccupied':
+		frametracker.append( 1 )
+		frametracker2.append( 0 )
+	elif text == 'Unoccupied' and text2 == 'Unoccupied':
+		frametracker.append( 0 )
+		frametracker2.append( 0 )
+
 #Initialize Variables
 global corners
 corners = []
 completeframes = []
 stoppedframe = []
+
 #Get Arguments and Set up Directory
 args = getArg()
 directory = selectDirectory()
@@ -205,24 +226,8 @@ for i in range(len(videoList)):
 			# and update the text
 			text2 = "Occupied"
 
-		if text == 'Occupied' and text2 == 'Occupied':
-			#Compare which contour is larger
-			if maxContour(cnts) > maxContour(cnts2):
-				frametracker.append( 1 )
-				frametracker2.append( 0 )
-			else:
-				frametracker.append( 0 )
-				frametracker2.append( 1 )
-		elif text == 'Unoccupied' and text2 == 'Occupied':
-			frametracker.append( 0 )
-			frametracker2.append( 1 )
-		elif text == 'Occupied' and text2 == 'Unoccupied':
-			frametracker.append( 1 )
-			frametracker2.append( 0 )
-		elif text == 'Unoccupied' and text2 == 'Unoccupied':
-			frametracker.append( 0 )
-			frametracker2.append( 0 )
-
+		
+		processText(cnts, cnts2, text, text2, frametracker, frametracker2)
 		bar.next()
 
 		if not args.get("veteran_mode", True):
@@ -240,8 +245,11 @@ for i in range(len(videoList)):
 	completeframes.append(frametracker2)
 
 	bar.finish()
-	print "Finish processing Video " + str(i+1) + " of " + str(len(videoList))
+	saved = {"frames":completeframes}
+	pickle.dump(saved,open(file_path[:-5] + ".p","wb"))
+	del completeframes[0]
+	del completeframes[0]
+	
+	print "Finished processing Video " + str(i+1) + " of " + str(len(videoList))
 
-saved = {"frames":completeframes}
-pickle.dump(saved,open(file_path[:-5] + ".p","wb"))
 
