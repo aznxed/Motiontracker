@@ -8,13 +8,11 @@ import os
 from progress.bar import Bar
 from glob import glob
 
-ap = argparse.ArgumentParser()
-ap.add_argument("-v", "--veteran_mode", action='store_true')
-args = vars(ap.parse_args())
-
-global corners
-corners = []
-completeframes = []
+def getArg():
+	ap = argparse.ArgumentParser()
+	ap.add_argument("-v", "--veteran_mode", action='store_true')
+	args = vars(ap.parse_args())
+	return args
 
 def selectDirectory():
 	root = tk.Tk()
@@ -44,19 +42,80 @@ def maxContour(cnts):
 			maxSize = cv2.contourArea(c)
 
 	return maxSize
+def setupReference(frame, corners):
+	roi = frame[corners[0][1]:corners[1][1], corners[0][0]:corners[1][0]]
+	roi2 = frame[corners[2][1]:corners[3][1], corners[2][0]:corners[3][0]]
 
+	gray = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
+	gray = cv2.GaussianBlur(gray, (21, 21), 0)
+
+	gray2 = cv2.cvtColor(roi2, cv2.COLOR_BGR2GRAY)
+	gray2 = cv2.GaussianBlur(gray2, (21, 21), 0)
+
+	return gray, gray2
+
+def processImage(frame, corners, refFrame, refFrame2):
+	roi = frame[corners[0][1]:corners[1][1], corners[0][0]:corners[1][0]]
+	roi2 = frame[corners[2][1]:corners[3][1], corners[2][0]:corners[3][0]]
+
+	gray = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
+	gray = cv2.GaussianBlur(gray, (21, 21), 0)
+
+	gray2 = cv2.cvtColor(roi2, cv2.COLOR_BGR2GRAY)
+	gray2 = cv2.GaussianBlur(gray2, (21, 21), 0)
+
+	frameDelta = cv2.absdiff(refFrame, gray)
+	thresh = cv2.threshold(frameDelta, 10, 255, cv2.THRESH_BINARY)[1]
+
+	thresh = cv2.dilate(thresh, None, iterations=1)
+	(_, cnts, _) = cv2.findContours(thresh.copy(), cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_SIMPLE)
+
+	frameDelta2 = cv2.absdiff(refFrame2, gray2)
+	thresh2 = cv2.threshold(frameDelta2, 10, 255, cv2.THRESH_BINARY)[1]
+
+	thresh2 = cv2.dilate(thresh2, None, iterations=1)
+	(_, cnts2, _) = cv2.findContours(thresh2.copy(), cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_SIMPLE)
+
+	return cnts, cnts2, thresh, thresh2, frameDelta, frameDelta2
+
+def displayImageDif(frame, corners, thresh, thresh2, frameDelta, frameDelta2):
+	cv2.rectangle(frame, corners[0], corners[1], (0, 255, 0), 2)
+	cv2.rectangle(frame, corners[2], corners[3], (255, 0, 0), 2)
+
+			# draw the text and timestamp on the frame
+	cv2.putText(frame, "Chamber Status 1: {}".format(text), (10, 20),
+	cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
+
+	cv2.putText(frame, "Chamber Status 2: {}".format(text2), (10, 40),
+	cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
+			
+	cv2.imshow("Thresh", thresh)
+	cv2.imshow("Frame Delta", frameDelta)
+
+	cv2.imshow("Thresh2", thresh2)
+	cv2.imshow("Frame Delta2", frameDelta2)
+	cv2.imshow(frame_title,frame)
+	pass
+
+#Initialize Variables
+global corners
+corners = []
+completeframes = []
+stoppedframe = []
+#Get Arguments and Set up Directory
+args = getArg()
 directory = selectDirectory()
 videoName = str(directory) +"/vid*.mp4"
 videoList = glob(videoName)
 videoList.sort()
 
+#Begin to select ROI
 for i in range(len(videoList)):
 	
 	cap = cv2.VideoCapture(videoList[i])
 	frame_title = os.path.split(videoList[i])[1]
 	length = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
 	cv2.namedWindow(frame_title)
-	#print length
 	frameNumber = 0
 
 	while True:
@@ -79,13 +138,8 @@ for i in range(len(videoList)):
 				elif key == ord('m'):
 					print("Corner Selection ")
 					cv2.setMouseCallback(frame_title, selectCorners)
-				elif key == ord('s'):
-					saved = {"corners":corners}
-			 		pickle.dump(saved,open(file_path[:-5] + ".p","wb"))
-			 		print('Done')
-			 		cv2.destroyAllWindows()
-			 		cap.release()
 			 	elif key == ord('q') or key == 27:
+			 		stoppedframe.append(frameNumber)
 			 		cv2.destroyAllWindows()
 			 		cap.release()
 			 		continue
@@ -104,27 +158,19 @@ for i in range(len(videoList)):
 		frame_title = os.path.split(file_path)[1]
 		cv2.namedWindow(frame_title)
 
-	cap.set(cv2.CAP_PROP_POS_FRAMES, frameNumber)
+	cap.set(cv2.CAP_PROP_POS_FRAMES, stoppedframe[0])
 	length = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+	del stoppedframe[0]
 
 	#Set up reference frame
 	ret,frame = cap.read()
+	refFrame, refFrame2 = setupReference(frame, corners)
 
-	roi = frame[corners[0][1]:corners[1][1], corners[0][0]:corners[1][0]]
-	roi2 = frame[corners[2][1]:corners[3][1], corners[2][0]:corners[3][0]]
-
-	gray = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
-	gray = cv2.GaussianBlur(gray, (21, 21), 0)
-
-	gray2 = cv2.cvtColor(roi2, cv2.COLOR_BGR2GRAY)
-	gray2 = cv2.GaussianBlur(gray2, (21, 21), 0)
-
-	refFrame = gray
-	refFrame2 = gray2
-
+	#Start at the beginning
 	cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
 	bar = Bar('Processing', max=length)
 
+	#Reset the frames tracked
 	frametracker = []
 	frametracker2 = []
 
@@ -139,26 +185,7 @@ for i in range(len(videoList)):
 		else:
 			key = None
 
-		roi = frame[corners[0][1]:corners[1][1], corners[0][0]:corners[1][0]]
-		roi2 = frame[corners[2][1]:corners[3][1], corners[2][0]:corners[3][0]]
-
-		gray = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
-		gray = cv2.GaussianBlur(gray, (21, 21), 0)
-
-		gray2 = cv2.cvtColor(roi2, cv2.COLOR_BGR2GRAY)
-		gray2 = cv2.GaussianBlur(gray2, (21, 21), 0)
-
-		frameDelta = cv2.absdiff(refFrame, gray)
-		thresh = cv2.threshold(frameDelta, 10, 255, cv2.THRESH_BINARY)[1]
-
-		thresh = cv2.dilate(thresh, None, iterations=1)
-		(_, cnts, _) = cv2.findContours(thresh.copy(), cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_SIMPLE)
-
-		frameDelta2 = cv2.absdiff(refFrame2, gray2)
-		thresh2 = cv2.threshold(frameDelta2, 10, 255, cv2.THRESH_BINARY)[1]
-
-		thresh2 = cv2.dilate(thresh2, None, iterations=1)
-		(_, cnts2, _) = cv2.findContours(thresh2.copy(), cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_SIMPLE)
+		cnts, cnts2, thresh, thresh2, frameDelta, frameDelta2 = processImage(frame, corners, refFrame, refFrame2)
 
 		for c in cnts:
 			# if the contour is too small, ignore it
@@ -199,24 +226,7 @@ for i in range(len(videoList)):
 		bar.next()
 
 		if not args.get("veteran_mode", True):
-
-			cv2.rectangle(frame, corners[0], corners[1], (0, 255, 0), 2)
-			cv2.rectangle(frame, corners[2], corners[3], (255, 0, 0), 2)
-
-			# draw the text and timestamp on the frame
-			cv2.putText(frame, "Chamber Status 1: {}".format(text), (10, 20),
-				cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
-
-			cv2.putText(frame, "Chamber Status 2: {}".format(text2), (10, 40),
-				cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
-			
-			cv2.imshow("Thresh", thresh)
-			cv2.imshow("Frame Delta", frameDelta)
-
-			cv2.imshow("Thresh2", thresh2)
-			cv2.imshow("Frame Delta2", frameDelta2)
-			cv2.imshow(frame_title,frame)
-
+			displayImageDif(frame, corners, thresh, thresh2, frameDelta, frameDelta2)
 		
 		if key == ord('q') or key == 27:
 			cv2.destroyAllWindows()
